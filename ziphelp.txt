@@ -1,0 +1,39 @@
+# 1 Main functions #
+- !zip #command1#command2...#commandN
+--- Using this command lets the bot download files from the room, zip them and upload them back to the room.
+--- The downloaded files can be specified with the following modifiers, which are split by using the '#'-symbol:
+----- #upl=UPLOADERNAME -> Full username needed -> example: #upl=kad
+----- #search=SEARCHTEXT -> This is a search for the filenames, it currently does not accept wildcards -> example: #search=img 40
+----- #filetype=FILETYPE -> If this is set only files with the specified type will be downloaded example: #filetype=mp4
+----- #num=NUMBEROFFILES -> Specifies how many files will be downloaded all other modifiers considered -> example #num=42
+----- #offset=NUMBEROFFILESSKIPPED -> Specifies how many files will be skipped all other modifiers considered -> example #offset=69
+----- #zipname=NAMEOFZIP -> Name of output zip, no .zip needed. If not set it will be randomly generated -> example #zipname=blondegirl_123
+----- #mirror -> an additional mirror will be uploaded to openload -> example #mirror
+
+--- Examples:
+----- !zip #upl=abcd#search=blonde#zipname=blondegirl_123#mirror
+------- This command downloads all files from Uploader abcd, that have 'blonde' in their filename. The downloaded files will get zipped
+------- into blondegirl_123.zip and uploaded to volafile and openload
+----- !zip #offset=5#num=10#zipname=weirdfiles
+------- This command downloads the 10 newest files from the room after skipping the first 5. The downloaded files will get zipped
+------- into weirdfiles.zip and uploaded to volafile
+
+- !mirror [FILE]
+--- Using this command lets the bot download a single file from the room and mirror it to openload. The file is added via drag and drop from the filelist
+--- The bot will output the link to the chat and to a filename_mirror.txt file which gets uploaded to the room.
+
+- !count [FILE]
+--- Using this command lets the bot output its position in the room in total and for the uploader. This is useful for #num and #offset from !zip
+
+# 2 Additional functions #
+- !alive
+--- Checks whether the bot is alive and returns a chat message
+
+- !sleep & !wake (Only usable by botadmins)
+--- Sets the bot to sleepmode, where no main functions can be executed
+
+- !zip help
+--- Uploads or references this textfile
+
+- !kill (Only usable by botadmins)
+--- Kills the bot in the room completely

@@ -1,0 +1,6 @@
+pyopenload
+requests
+requests-toolbelt
+tqdm
+Unidecode
+volapi

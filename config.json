@@ -1,0 +1,66 @@
+{
+  "main": {
+    "multiplier": 1048576,
+    "headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:55.0) Gecko/20100101 Firefox/55.0",
+      "DNT": "1",
+      "Upgrade-Insecure-Requests": "1"
+    },
+    "cookies": {
+      "allow-download": "1"
+    },
+    "mirrorzipmax": 990,
+    "mirrorziptest": 995.0,
+    "zipbotuser": "zipbotuser",
+    "zipbotpass": "zipbotpassword",
+    "dluser": "downloaduser",
+    "dlpass": "downloadpassword",
+    "opus": "openload-apiuser",
+    "oppw": "openload-apikey"
+  },
+  "rooms": {
+    "genericroom": {
+      "allowedzippers": [
+        "*kad",
+        "*zipbot",
+        "*RealDolos"
+      ],
+      "botadmins": [
+        "*kad"
+      ],
+      "mirrormaxmem": 7500.0,
+      "maxmem": 5000.0,
+      "anonfile": 0
+    },
+    "YOURROOM": {
+      "allowedzippers": [
+        "all"
+      ],
+      "botadmins": [
+        "*admiin",
+        "*kad"
+      ],
+      "mirrormaxmem": 7500.0,
+      "maxmem": 5000.0,
+      "anonfile": 0
+    }
+  },
+  "os": {
+    "nt": {
+      "logfolder": "./volalog/log/",
+      "zipfolder": "./volalog/zip/",
+      "archfolder": "./volalog/archive/",
+      "mirrorfolder": "./volalog/mirror/",
+      "mirrorlogs": "./volalog/mirrorlogs/",
+      "membuff": 1000
+    },
+    "posix": {
+      "logfolder": "./voladl/log/",
+      "zipfolder": "./voladl/zip/",
+      "archfolder": "./voladl/archive/",
+      "mirrorfolder": "./voladl/mirror/",
+      "mirrorlogs": "./voladl/mirrorlogs/",
+      "membuff": 300
+    }
+  }
+}
