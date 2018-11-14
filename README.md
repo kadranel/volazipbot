@@ -1,2 +1,0 @@
-# crappyvolazipbot
-crappyvolazipbot
