@@ -12,225 +12,248 @@ from requests_toolbelt.multipart import encoder
 from openload import OpenLoad
 import functions as f
 
-helpfile = ""
+help_file = ""
 kill = False
 
 
 class VolaZipBot(object):
-    def __init__(self, lister):
-        self.session = f.id_generator()
+    def __init__(self, args):
+        # Creating a session and a refresh_time. The bot starts a new session once the refresh_time is reached
+        self.session = datetime.now().strftime("%Y-%m-%d") + "-" + f.id_generator()
         self.refresh_time = datetime.now() + timedelta(days=1)
+
+        # Setting status booleans
         self.alive = True
         self.wake = True
-        self.cfg = json.load(open('config.json', 'r'))
+        self.zipper = args[1]
+        self.loggedin = False
 
-        if lister[0] in self.cfg['rooms'].keys():
-            self.roomselect = lister[0]
+        # Setting room information
+        self.URL = "https://volafile.org/r/" + args[0]
+        self.room = args[0]
+
+        # Loading the config.json
+        self.cfg = json.load(open('config.json', 'r'))
+        self.cookies = self.cfg['main']['cookies']
+        self.headers = self.cfg['main']['headers']
+
+        # Initialising the roomselect and platform -> this is used for navigating in config.json
+        if args[0] in self.cfg['rooms'].keys():
+            self.roomselect = args[0]
         else:
             self.roomselect = 'genericroom'
         if os.name in self.cfg['os'].keys():
             self.platform = os.name
         else:
-            self.printl("OS " + os.name + " not supported.", "__init__")
+            print("OS {} is not supported.".format(os.name))
             self.alive = False
-        self.cookies = self.cfg['main']['cookies']
-        self.headers = self.cfg['main']['headers']
-        if len(lister) == 3:
-            self.roompw = lister[2]
-        elif len(lister) == 2:
+
+        # Checking if a room password is set in args
+        if len(args) == 3:
+            self.roompw = args[2]
+        elif len(args) == 2:
             self.roompw = '*'
-        self.zipper = lister[1]
-        self.URL = "https://volafile.org/r/" + lister[0]
-        self.room = lister[0]
-        self.loggedin = False
-        self.chatbot = self.chatbot()
-        if self.roompw == '*':
-            self.listen = Room(self.room)
-        elif self.roompw[0:4] == '#key':
-            self.listen = Room(name=self.room, key=self.roompw[4:])
-        else:
-            self.listen = Room(name=self.room, password=self.roompw)
+
+        # Connecting to the room via volapi
+        self.listen = self.chatbot()
+        self.printl("Session: {}".format(self.session), "__init__")
 
     def __repr__(self):
-        return "<VolaZipBot(alive={}, zipper={}, listen={}, chatbot={})>".format(self.alive, self.zipper, str(self.listen), str(self.chatbot))
+        return "<VolaZipBot(alive={}, zipper={}, listen={})>".format(self.alive, self.zipper, str(self.listen))
 
     def joinroom(self):
-        """Add the listener to the room."""
+        """Adds the listener to the room."""
 
         def onmessage(m):
             """Print the new message and respond to user input"""
             self.printl(m, "onmessage/main")
 
-            if self.zipper is True and self.wake is True and (str(m.msg.lower()[0:9]) == '!zip help'):
-                self.ziphelp(m.nick)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:5]) == '!help'):
-                self.ziphelp(m.nick)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:4]) == '!zip') and self.zipcheck(m.nick, m.green, m.purple):
-                self.ziphandler(m.nick, m.msg, files=m.files)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!count') and self.zipcheck(m.nick, m.green, m.purple):
-                self.counthandler(m.nick, m.msg, files=m.files)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:7]) == '!mirror') and self.zipcheck(m.nick, m.green, m.purple):
-                self.mirrorhandler(m.nick, m.msg, files=m.files)
+            # Commands for the bot are evaluated here
+            if self.zipper is True and self.wake is True and (str(m.msg.lower()[0:9]) == '!zip help' or str(m.msg.lower()[0:5]) == '!help'):
+                self.zip_help(m.nick)
+            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:4]) == '!zip') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.zip_handler(m.nick, m.msg, files=m.files)
+            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!count') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.count_handler(m.nick, m.msg, files=m.files)
+            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:7]) == '!mirror') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.mirror_handler(m.nick, m.msg, files=m.files)
             elif self.zipper is True and (str(m.msg.lower()[0:6]) == '!alive'):
-                self.printl(m.nick + " -> checking for bot: " + str(self), "alive")
+                self.printl("{} -> checking for bot: {}".format(m.nick, str(self)), "alive")
                 if self.wake is True:
-                    self.chatbot.post_chat("@{}: chinaman working!".format(m.nick))
+                    self.post_chat("@{}: chinaman working!".format(m.nick))
                 else:
-                    self.chatbot.post_chat("@{}: chinaman is asleep.".format(m.nick))
-            elif self.zipper is True and (str(m.msg.lower()[0:5]) == '!kill') and self.admincheck(m.nick, m.green):
+                    self.post_chat("@{}: chinaman is asleep.".format(m.nick))
+            elif self.zipper is True and (str(m.msg.lower()[0:5]) == '!kill') and self.admincheck(m.nick, m.green, m.purple):
                 self.kill(m.nick)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!sleep') and self.admincheck(m.nick, m.green):
-                self.chatbot.post_chat("@{}: chinaman going to sleep!".format(m.nick))
+            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!sleep') and self.admincheck(m.nick, m.green, m.purple):
+                self.post_chat("@{}: chinaman going to sleep!".format(m.nick))
                 self.wake = False
-            elif self.zipper is True and self.wake is False and (str(m.msg.lower()[0:5]) == '!wake') and self.admincheck(m.nick, m.green):
-                self.chatbot.post_chat("@{}: chinaman woke up!".format(m.nick))
+            elif self.zipper is True and self.wake is False and (str(m.msg.lower()[0:5]) == '!wake') and self.admincheck(m.nick, m.green, m.purple):
+                self.post_chat("@{}: chinaman woke up!".format(m.nick))
                 self.wake = True
+            elif self.zipper is False and (str(m.msg.lower()[0:7]) == '!zipbot') and self.admincheck(m.nick, m.green):
+                self.post_chat("@{}: Whuddup!".format(m.nick))
+                self.zipper = True
             elif datetime.now() > self.refresh_time:
+                # if the refreshtime is now -> close the bot
                 self.close()
 
         if self.alive:
+            # add the listener on the volapi room
             self.listen.add_listener("chat", onmessage)
-            self.printl("Connecting to room: " + str(self.listen), "joinroom")
+            self.printl("Connecting to room: {}".format(str(self.listen)), "joinroom")
             self.listen.listen()
 
-    def mirrorhandler(self, name, message, files):
+    def mirror_handler(self, name, message, files):
         """Grabs files from a room and uplpoads them to openload"""
-        self.printl(name + " -> requested mirror", "mirrorhandler")
+        self.printl("{} -> requested mirror".format(name), "mirror_handler")
+
+        # generate a folder name
         newfol = f.id_generator()
-        inroom = False
+
         if not(files is None) and len(files) == 1:
             mspl = str(message).split('@')
-            filelist = self.listen.files
-            for data in reversed(filelist):
-                if str(mspl[1]).replace(" ", "") == data.id:
-                    inroom = True
-            if inroom:
-                filechecked = VolaZipBot.filecheck(name, files[0])
+            # look if the file is in the room
+            if self.file_in_room(str(mspl[1]).replace(" ", "")):
+                # create the message, that gets put at the end of the _mirror.txt
+                filechecked = self.filecheck(name, files[0])
                 mirr_message = ""
                 memadd = files[0].size
-                if memadd / 1024 / 1024 <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
-                    self.chatbot.post_chat('@' + name + ': Starting to mirror.')
+
+                # this checks whether the file is lower than the maximum mirror file size allowed in cfg
+                if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
+
+                    self.post_chat('@{}: Starting to mirror.'.format(name))
                     time.sleep(1)
+                    # Downloading the file here while getting the filepath back
                     zippath = self.singleFileDownload(files[0].url, newfol, True)
-                    if memadd / 1024 / 1024 <= self.cfg['main']['mirrorziptest']:
-                        self.printl('Uploading to Openload: ' + zippath, "mirrorhandler")
+                    # Checking if file is bigger then 995 mb since openload does not allow files > 1gb
+                    if memadd / self.cfg['main']['multiplier'] <= self.cfg['main']['mirrorziptest']:
+                        self.printl('Uploading to Openload: {}'.format(zippath), "mirrorhandler")
+                        # Uploading the file to openload
                         upinfos = self.upOpenload(zippath)
                         self.printl(str(upinfos), "mirrorhandler")
                         mirr_message = upinfos['url'] + "\n"
                         uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror.txt'
-                        self.chatbot.post_chat('@' + name + ': ' + upinfos['name'] + ' is uploaded to -> ' + upinfos['url'])
+                        # return message to chat
+                        self.post_chat('@{}: {} is uploaded to -> {}'.format(name, upinfos['name'], upinfos['url']))
                         if os.path.isfile(uppath):
                             uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror_' + str(f.id_generator()) + '.txt'
                         fl = open(uppath, "w+")
                         fl.write(mirr_message + ' \n' + filechecked)
                         fl.close()
-                        self.volaupload(self.cfg['main']['zipbotuser'], self.cfg['main']['zipbotpass'], uppath)
+                        self.volaupload(uppath)
                     else:
-                        self.printl('Checking if zip: ' + zippath, "mirrorhandler")
+                        # file is > 1gb -> needs to be converted to zip and split before uploading
+                        self.printl('Checking if zip: {}'.format(zippath), "mirrorhandler")
                         pathsplit = zippath.split('/')
                         filesplit = str(pathsplit[-1])
                         endsplit = filesplit.split('.')
                         ending = str(endsplit[-1])
                         if ending != 'zip':
+                            # making a zip
                             zipname = filesplit
                             shutil.make_archive(zipname, 'zip', self.zipfol(newfol))
                             os.remove(self.zipfol(newfol) + '/' + zipname)
                             shutil.move(zipname + '.zip', self.zipfol(newfol) + '/' + zipname + '.zip')
                             zippath = self.zipfol(newfol) + '/' + zipname + '.zip'
+
+                        # splitting the zip with file_split
                         self.printl('Splitting zip: ' + zippath, "mirrorhandler")
                         self.file_split(zippath, self.cfg['main']['mirrorzipmax'] * self.cfg['main']['multiplier'])
                         shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
-                        retmsg = '@' + name + ': ' + filesplit + ' is uploaded to ->'
+                        retmsg = '@{}: {} is uploaded to ->'.format(name, filesplit)
                         i = 1
                         for fi in os.listdir(self.zipfol(newfol)):
                             testmsg = retmsg
                             xpath = os.path.join(self.zipfol(newfol), fi)
                             upinfos = self.upOpenload(xpath)
                             testmsg = testmsg + ' ' + upinfos['url']
+                            # putting together the message with file links
                             mirr_message = mirr_message + upinfos['url'] + " \n"
                             if len(testmsg) < (295 * i):
+                                # max of 300 characters for one vola chat message
                                 retmsg = testmsg
                             else:
                                 retmsg = retmsg + '\n' + ' ' + upinfos['url']
 
                                 i = i + 1
-                        self.chatbot.post_chat(retmsg)
+
+                        self.post_chat(retmsg)
+
+                        # creating the _mirror.txt here
                         uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror.txt'
                         if os.path.isfile(uppath):
                             uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror_' + str(f.id_generator()) + '.txt'
                         fl = open(uppath, "w+")
                         fl.write(mirr_message + ' \n' + filechecked)
                         fl.close()
-                        self.volaupload(self.cfg['main']['zipbotuser'], self.cfg['main']['zipbotpass'], uppath)
+                        self.volaupload(uppath)
+                    # cleanup
                     pathsplit = zippath.split('/')
                     filesplit = str(pathsplit[-1])
                     if os.path.isfile(zippath):
                         shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
                     shutil.rmtree(self.zipfol(newfol))
                 else:
-                    self.chatbot.post_chat('@' + name + ': The file @' + str(mspl[1].replace(" ", "")) + ' is too big to mirror. -> > '+ str(self.cfg['rooms'][self.roomselect]['mirrormaxmem']) + ' MB')
+                    self.post_chat('@{}: The file @{} is too big to mirror. -> > {} MB'.format(name, str(mspl[1].replace(" ", "")), str(self.cfg['rooms'][self.roomselect]['mirrormaxmem'])))
 
             else:
-                self.chatbot.post_chat('@' + name + ': The file @' + str(mspl[1].replace(" ", "")) + ' was not found in the room and can not be mirrored in here.')
+                self.post_chat('@{}: The file @{} was not found in the room and can not be mirrored in here.'.format(name, str(mspl[1].replace(" ", ""))))
 
         else:
-            self.chatbot.post_chat('@' + name + ': Your message could not be interpreted correctly. (use !zip help)')
-            return False
+            self.post_chat('@{}: Your message could not be interpreted correctly. (use !zip help)'.format(name))
 
-    @staticmethod
-    def filecheck(name, file):
+    def filecheck(self, name, file):
         """Returns fileinfo for the _mirror.txt"""
-        fileupl = file.uploader
-        filesize = file.size/1024/1024
-        requester = name
+        fileupl = str(file.uploader)
+        filesize = file.size/self.cfg['main']['multiplier']
+        requester = str(name)
         filesizestring = "{0:.2f}".format(filesize) + " MB"
-        return "You need to download all of the links to have a complete file # Size: " + str(filesizestring) + " # Uploader: " + str(fileupl) + " # Requested by: " + str(requester) + " # "
+        return "You need to download all of the links to have a complete file # Size: {} # Uploader: {} # Requested by: {} # ".format(filesizestring, fileupl, requester)
 
-    def counthandler(self, name, message, files):
+    def count_handler(self, name, message, files):
         """Counts file positions in the current room"""
-        self.printl(name + " -> requested count", "counthandler")
+        self.printl("{} -> requested count".format(name), "count_handler")
 
         if not(files is None) and len(files)>0 and len(files)<3:
             mspl = str(message).split('@')
             filelist = self.listen.files
             i = 0
-
             for file in files:
                 i = i + 1
-                inroom = False
-                for data in reversed(filelist):
-                    if str(mspl[i]).replace(" ", "") == data.id:
-                        inroom = True
-                if inroom:
+                # check if the mentioned file is in the room
+                if self.file_in_room(str(mspl[i]).replace(" ", "")):
                     found = False
                     usercount = 0
                     fullcount = 0
                     upl = file.uploader
-                    fname = file.name
-                    id = file.id
+                    fname = str(file.name)
+                    fid = file.fid
                     for dat in reversed(filelist):
                         if dat.uploader == upl:
                             usercount = usercount + 1
                         fullcount = fullcount + 1
-                        if dat.id == id:
+                        if dat.fid == fid:
                             found = True
                             break
                     if found:
-                        self.chatbot.post_chat('@' + name + ': ' + str(fname) + ' - > count in room: ' + str(fullcount) + ' - count for ' + upl + ': ' + str(usercount))
+                        self.post_chat('@{}: {} - > count in room: {} - count for {}: {}'.format(name, fname, str(fullcount), upl, str(usercount)))
                 else:
-                    self.chatbot.post_chat('@' + name + ': The file @' + str(mspl[i].replace(" ", "")) + ' was not found in the room.')
+                    self.post_chat('@{}: The file @{} was not found in the room.'.format(name, str(mspl[i].replace(" ", ""))))
 
         else:
-            self.chatbot.post_chat('@' + name + ': Your message could not be interpreted correctly. (use !zip help)')
+            self.post_chat('@' + name + ': Your message could not be interpreted correctly. (use !zip help)')
             return False
 
-    def ziphandler(self, name, message, mirror='vola', files=None):
+    def zip_handler(self, name, message, mirror='vola', files=None):
         """Downloads files, zips them, uploads them back to volafile and possibly other mirrorsites"""
-        self.printl(name + " -> requested zip with: '" + message + "'", "ziphandler")
+        self.printl("{} -> requested zip with: '{}'".format(name, message), "zip_handler")
         newfol = f.id_generator()
         mspls = message.split('#')
         additionalmirror = False
         if len(mspls) > 1:
+            # if there are any '#command'
             upl = '*'
             fname = '*'
             ftype = '*'
@@ -253,45 +276,45 @@ class VolaZipBot(object):
                     if str(splits[0]) == 'offset' or str(splits[0]) == 'lownum':
                         offset = int(eval(splits[1]))
                     if str(splits[0]) == 'zipname' or str(splits[0]) == 'zip':
-                        zipname = str(splits[1]).replace(" ", "")  # + '[' + VolaZipBot.namereplace(name) + ']'
+                        zipname = str(splits[1]).replace(" ", "")
                 elif len(splits) == 1:
                     if str(splits[0]) == 'mirror' or str(splits[0]) == 'openload':
                         additionalmirror = True
                 else:
                     continue
             if mirror == 'vola':
-                self.chatbot.post_chat('@' + name + ': Downloading and zipping initiated. No other requests will be handled until the upload is finished.')
+                self.post_chat('@' + name + ': Downloading and zipping initiated. No other requests will be handled until the upload is finished.')
             if mirror == 'openload':
-                self.chatbot.post_chat('@' + name + ': Downloading and mirroring initiated. No other requests will be handled until the upload is finished.')
+                self.post_chat('@' + name + ': Downloading and mirroring initiated. No other requests will be handled until the upload is finished.')
             self.handleDownloads(newfol, upl, fname, ftype, num, offset)
 
         else:
             if files is None or len(files) < 2:
-                self.chatbot.post_chat('@' + name + ': Your message could not be interpreted correctly. (use !zip help)')
+                self.post_chat('@' + name + ': Your message could not be interpreted correctly. (use !zip help)')
                 return False
             else:
-                self.chatbot.post_chat('@' + name + ': Downloading and zipping initiated. No other reque!sts will be handled until the upload is finished.')
+                self.post_chat('@' + name + ': Downloading and zipping initiated. No other requests will be handled until the upload is finished.')
                 memadd = 0
                 zipname = f.zipNameReplace(f.id_generator())
                 self.crzipfol(newfol)
                 for file in files:
                     memadd = memadd + file.size
                     url = file.url
-                    if memadd / 1024 / 1024 <= self.cfg['rooms'][self.roomselect]['maxmem']:
+                    if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['maxmem']:
                         zipname = self.singleFileDownload(url, newfol)
 
         if len(os.listdir(self.zipfol(newfol))) == 0:
-            self.printl('No files were downloaded!', "ziphandler")
-            self.chatbot.post_chat('@' + name + ': Error creating zip -> No files downloaded. (Use !zip help')
+            self.printl('No files were downloaded!', "zip_handler")
+            self.post_chat('@' + name + ': Error creating zip -> No files downloaded. (Use !zip help')
             shutil.rmtree(self.zipfol(newfol))
             return False
-        self.printl('Zipping: ' + zipname + '.zip', "ziphandler")
+        self.printl('Zipping: ' + zipname + '.zip', "zip_handler")
         shutil.make_archive(zipname, 'zip', self.zipfol(newfol))
         shutil.move(zipname + '.zip', self.zipfol(newfol) + '/' + zipname + '.zip')
         if mirror == 'vola':
             uppath = self.zipfol(newfol) + '/' + zipname + '.zip'
-            self.printl('Uploading to volafile: ' + zipname + '.zip', "ziphandler")
-            self.volaupload(self.cfg['main']['zipbotuser'], self.cfg['main']['zipbotpass'], uppath)
+            self.printl('Uploading to volafile: ' + zipname + '.zip', "zip_handler")
+            self.volaupload(uppath)
 
         if mirror == 'openload' or additionalmirror:
             memadd = 0
@@ -300,49 +323,49 @@ class VolaZipBot(object):
                 xpath = os.path.join(self.zipfol(newfol), fi)
                 if os.path.isfile(xpath):
                     memadd = memadd + os.path.getsize(xpath)
-            if memadd / 1024 / 1024 <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
-                if memadd / 1024 / 1024 <= self.cfg['main']['mirrorziptest']:
-                    self.printl('Uploading to Openload: ' + zipname + '.zip', "ziphandler")
+            if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
+                if memadd / self.cfg['main']['multiplier'] <= self.cfg['main']['mirrorziptest']:
+                    self.printl('Uploading to Openload: ' + zipname + '.zip', "zip_handler")
                     upinfos = self.upOpenload(self.zipfol(newfol) + '/' + zipname + '.zip')
-                    self.printl(str(upinfos), "ziphandler")
+                    self.printl(str(upinfos), "zip_handler")
                     mirr_message = upinfos['url'] + "\n"
                     uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror.txt'
                     if not additionalmirror:
-                        self.chatbot.post_chat('@' + name + ': ' + upinfos['name'] + ' is uploaded to -> ' + upinfos['url'])
+                        self.post_chat('@' + name + ': ' + upinfos['name'] + ' is uploaded to -> ' + upinfos['url'])
                     if os.path.isfile(uppath):
                         uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror_' + str(f.id_generator()) + '.txt'
                     fl = open(uppath, "w+")
                     fl.write(mirr_message + ' \n' + 'Requested by ' + name)
                     fl.close()
 
-                    self.volaupload(self.cfg['main']['zipbotuser'], self.cfg['main']['zipbotpass'], uppath)
+                    self.volaupload(uppath)
 
                 else:
                     if self.cfg['rooms'][self.roomselect]['anonfile']:
-                        self.printl('Uploading to anonfiles: ' + zipname + '.zip', "ziphandler")
+                        self.printl('Uploading to anonfiles: ' + zipname + '.zip', "zip_handler")
                         upinfos = f.anonfileupload(self.zipfol(newfol) + '/' + zipname + '.zip')
-                        self.printl(str(upinfos), "ziphandler")
+                        self.printl(str(upinfos), "zip_handler")
                         if upinfos['status'] == 'true':
-                            self.chatbot.post_chat('@' + name + ': ' +
+                            self.post_chat('@' + name + ': ' +
                                              upinfos['data']['file']['metadata']['name'] + ' is uploaded to -> ' +
                                              upinfos['data']['file']['url']['full'])
                         else:
-                            self.chatbot.post_chat('@' + name + ': Error uploading to anonfiles -> ' +
+                            self.post_chat('@' + name + ': Error uploading to anonfiles -> ' +
                                              upinfos['error']['message'])
                     else:
                         zippath = self.zipfol(newfol) + '/' + zipname + '.zip'
                         pathsplit = zippath.split('/')
                         filesplit = str(pathsplit[-1])
 
-                        self.printl('Splitting zip: ' + zipname + '.zip', "ziphandler")
+                        self.printl('Splitting zip: ' + zipname + '.zip', "zip_handler")
                         newpath = self.zipfol(newfol) + '/mir'
                         try:
                             if not os.path.exists(newpath):
                                 os.makedirs(newpath)
-                                self.printl('Created directory: ' + newpath, "ziphandler")
+                                self.printl('Created directory: ' + newpath, "zip_handler")
                                 newpath = newpath + '/'
                         except OSError:
-                            self.printl('Error: Creating directory. ' + newpath, "ziphandler")
+                            self.printl('Error: Creating directory. ' + newpath, "zip_handler")
                         shutil.move(zippath, newpath + filesplit)
                         self.file_split(newpath + filesplit,
                                         self.cfg['main']['mirrorzipmax'] * self.cfg['main']['multiplier'])
@@ -362,26 +385,36 @@ class VolaZipBot(object):
 
                                 i = i + 1
                         if not additionalmirror:
-                            self.chatbot.post_chat(retmsg)
+                            self.post_chat(retmsg)
                         uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit.replace('%20', '_') + '_mirror.txt'
                         if os.path.isfile(uppath):
                             uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit.replace('%20', '_') + '_mirror_' + str(f.id_generator()) + '.txt'
                         fl = open(uppath, "w+")
                         fl.write(mirr_message + ' \n' + 'Requested by ' + name + " # You need to download all of the links to have a complete file.")
                         fl.close()
-                        self.volaupload(self.cfg['main']['zipbotuser'], self.cfg['main']['zipbotpass'], uppath)
+                        self.volaupload(uppath)
 
             else:
-                self.chatbot.post_chat('@' + name + ': File too big to mirror. -> > ' + str(self.cfg['rooms'][self.roomselect]['mirrormaxmem']))
+                self.post_chat('@' + name + ': File too big to mirror. -> > ' + str(self.cfg['rooms'][self.roomselect]['mirrormaxmem']))
 
         shutil.move(self.zipfol(newfol) + '/' + zipname + '.zip', self.archfol(newfol) + '/' + zipname + '.zip')
         shutil.rmtree(self.zipfol(newfol))
 
         return True
 
-    def volaupload(self, user, password, uppath):
+    def volaupload(self, uppath):
         """Uploads a file to vola, currently user/passwd are not needed"""
-        self.chatbot.upload_file(uppath)
+        return self.listen.upload_file(uppath)
+
+    def post_chat(self, message):
+        """Posts a chat message to the connected room"""
+
+        try:
+            self.listen.post_chat(message)
+            self.printl("Sending message: {}".format(message), "post_chat")
+        except OSError:
+            self.printl("Message could not be sent - OSError", "post_chat")
+        return False
 
     def file_split(self, file, max):
         """Splits a zip file"""
@@ -424,16 +457,13 @@ class VolaZipBot(object):
             return str(filesplit[0])
 
     def handleDownloads(self, newfol, uplname='*', filename='*', filetype='*', numoffiles=-1, offset=0):
-        """Checks if the needed folders for downloading exist"""
+        """Checks the files in the room along the set criteria in a !zip command"""
         if os.path.exists(self.zipfol(newfol)):
             self.printl('Folder Exists Already', "handleDownloads")
             path = self.zipfol(newfol) + '/'
         else:
             path = self.crzipfol(newfol)
-        self.downloadzz(self.listen.files, path, uplname, filename, filetype, numoffiles, offset)
-
-    def downloadzz(self, files, path, uplname, filename, filetype, numoffiles=-1, offset=0):
-        """Checks the files in the room along the set criteria in a !zip command"""
+        files = self.listen.files
         i = 1
         j = 1
         memadd = 0
@@ -450,11 +480,11 @@ class VolaZipBot(object):
                         if i <= numoffiles or numoffiles == -1:
                             if j > offset or offset == 0:
                                 memadd = memadd + size
-                                if memadd/1024/1024 <= self.cfg['rooms'][self.roomselect]['maxmem']:
+                                if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['maxmem']:
                                     dpath = path + fn + '.' + ending
                                     if os.path.isfile(dpath):
                                         dpath = path + fn + "-" + f.id_generator() + '.' + ending
-                                    self.printl('[' + str(i) + '] Downloading: ' + dpath + ' - ' + dlurl, "downloadzz")
+                                    self.printl('[' + str(i) + '] Downloading: ' + dpath + ' - ' + dlurl, "handleDownloads")
                                     self.download_file(dlurl, dpath)
                                 i = i + 1
                             j = j + 1
@@ -468,9 +498,9 @@ class VolaZipBot(object):
             if not r:
                 return False
             total_size = int(r.headers.get("content-length", 0))
-            with open(file_name + ".part", "wb") as f:
+            with open(file_name + ".part", "wb") as fl:
                 for data in tqdm(iterable=r.iter_content(chunk_size=chunk_size), total=total_size / chunk_size, unit="KB", unit_scale=True):
-                    f.write(data)
+                    fl.write(data)
             # Remove the ".part" from the file name
             os.rename(file_name + ".part", file_name)
             return True
@@ -478,13 +508,13 @@ class VolaZipBot(object):
             print("[-] Error: " + str(ex))
             return False
 
-    def ziphelp(self, user):
+    def zip_help(self, user):
         """Modifies and uploads a ziphelp.txt or links to an existing one"""
-        self.printl(user + " -> requesting ziphelp", "ziphelp")
-        global helpfile
-        if helpfile == "" or not(self.fileinroom(helpfile)):
+        self.printl(user + " -> requesting zip_help", "zip_help")
+        global help_file
+        if help_file == "" or not(self.file_in_room(help_file)):
             tpath = self.safefol(self.room) + "/ziphelp-" + self.room + ".txt"
-            if (os.path.isfile(tpath)):
+            if os.path.isfile(tpath):
                 os.remove(tpath)
             shutil.copyfile('ziphelp.txt', tpath)
             fl = open(tpath, "a")
@@ -498,34 +528,31 @@ class VolaZipBot(object):
             msg = msg[:-2]
             fl.write(msg)
             fl.close()
-            fileid = self.chatbot.upload_file(tpath)
-            helpfile = fileid
+            fileid = self.volaupload(tpath)
+            help_file = fileid
             time.sleep(2)
-        self.chatbot.post_chat("@{}: -> @{}".format(user, str(helpfile)))
+        self.post_chat("@{}: -> @{}".format(user, str(help_file)))
 
-    def fileinroom(self, fileid):
+    def file_in_room(self, fileid):
         """Checks if a fileid is in the current room"""
         found = False
         filelist = self.listen.files
         for data in reversed(filelist):
-            if data.id == fileid:
+            if data.fid == fileid:
                 found = True
         return found
-
 
     def kill(self, user):
         """Reaction to !kill, kills the whole bot"""
         self.printl(user + " -> killing bots in room: " + str(self), "kill")
         self.alive = False
         try:
-            self.chatbot.post_chat("@{}: Thats it, i'm out!".format(user))
+            self.post_chat("@{}: Thats it, i'm out!".format(user))
         except OSError:
             self.printl("message could not be sent - OSError", "kill")
         time.sleep(1)
         self.listen.close()
-        self.chatbot.close()
         del self.listen
-        del self.chatbot
         del self.cfg
         global kill
         kill = True
@@ -536,9 +563,7 @@ class VolaZipBot(object):
         self.printl("Closing current instance due to runtime: " + str(self), "close")
         self.alive = False
         self.listen.close()
-        self.chatbot.close()
         del self.listen
-        del self.chatbot
         del self.cfg
         return ""
 
@@ -558,56 +583,47 @@ class VolaZipBot(object):
         if not(os.path.exists(self.safefol(self.room))):
             self.crfol(self.room)
         dpath = self.safefol(self.room) + '/' + self.session + '.txt'
-        if not (os.path.isfile(dpath)):
-            fl = open(dpath, "w+")
-            fl.write('Logging for ' + self.session + ':\n')
-            fl.close()
+
+        fl = open(dpath, "w+")
+        fl.write('Logging for ' + self.session + ':\n')
+        fl.close()
+
         if self.roompw == '*':
-            r = Room(self.room)
+            r = Room(name=self.room, user=self.cfg['main']['dluser'])
         elif self.roompw[0:4] == '#key':
-            r = Room(name=self.room, key=self.roompw[4:])
+            r = Room(name=self.room, user=self.cfg['main']['dluser'], key=self.roompw[4:])
         else:
-            r = Room(name=self.room, password=self.roompw)
+            r = Room(name=self.room, user=self.cfg['main']['dluser'], password=self.roompw)
+
+        time.sleep(1)
+        if r.user.login(self.cfg['main']['dlpass']):
+            self.printl("Logged in as: " + self.cfg['main']['dluser'], "chatbot")
+        else:
+            self.printl("Login failed!", "chatbot")
+
         if not self.loggedin:
-            if not(self.cfg['main']['dluser'] == self.cfg['main']['zipbotuser']):
-                r.user.change_nick(self.cfg['main']['dluser'])
-                time.sleep(1)
-                r.user.login(self.cfg['main']['dlpass'])
 
-                time.sleep(1)
-                cj = r.conn.cookies
-                cookies_dict = {}
-                for cookie in cj:
-                    if "volafile" in cookie.domain:
-                        cookies_dict[cookie.name] = cookie.value
-                        self.loggedin = True
-                self.cookies = {**self.cookies, **cookies_dict}
-                self.printl("Download session cookie: " + str(self.cookies), "chatbot")
-                r.user.logout()
-                time.sleep(2)
-                r.user.change_nick(self.cfg['main']['zipbotuser'])
-                time.sleep(1)
+            time.sleep(1)
+            cj = r.conn.cookies
+            cookies_dict = {}
+            for cookie in cj:
+                if "volafile" in cookie.domain:
+                    cookies_dict[cookie.name] = cookie.value
+                    self.loggedin = True
+            self.cookies = {**self.cookies, **cookies_dict}
+            self.printl("Download session cookie: " + str(self.cookies), "chatbot")
 
-                if r.user.login(self.cfg['main']['zipbotpass']):
-                    self.printl("Logged in as: " + self.cfg['main']['zipbotuser'], "chatbot")
-                else:
-                    self.printl("Login failed!", "chatbot")
+        if not(self.cfg['main']['dluser'] == self.cfg['main']['zipbotuser']):
+
+            r.user.logout()
+            time.sleep(2)
+            r.user.change_nick(self.cfg['main']['zipbotuser'])
+            time.sleep(1)
+
+            if r.user.login(self.cfg['main']['zipbotpass']):
+                self.printl("Logged in as: " + self.cfg['main']['zipbotuser'], "chatbot")
             else:
-                r.user.change_nick(self.cfg['main']['zipbotuser'])
-                time.sleep(1)
-
-                if r.user.login(self.cfg['main']['zipbotpass']):
-                    self.printl("Logged in as: " + self.cfg['main']['zipbotuser'], "chatbot")
-                else:
-                    self.printl("Login failed!", "chatbot")
-                cj = r.conn.cookies
-                cookies_dict = {}
-                for cookie in cj:
-                    if "volafile" in cookie.domain:
-                        cookies_dict[cookie.name] = cookie.value
-                        self.loggedin = True
-                self.cookies = cookies_dict
-                self.printl("Download session cookie: " + str(self.cookies), "chatbot")
+                self.printl("Login failed!", "chatbot")
 
         return r
 
@@ -618,15 +634,13 @@ class VolaZipBot(object):
         else:
             name = user
         if (name in self.cfg['rooms'][self.roomselect]['botadmins']) or ('all' in self.cfg['rooms'][self.roomselect]['botadmins']) or mod:
+            self.printl(user + " was accepted!", "admincheck")
             return True
         else:
             self.printl(user + " was denied!", "admincheck")
-            try:
-                self.chatbot.post_chat("@{}: Who even are you? (use !zip help)".format(user))
-            except OSError:
-                self.printl("message could not be sent - OSError", "admincheck")
+            self.post_chat("@{}: Who even are you? (use !zip help)".format(user))
             return False
-
+            
     def zipcheck(self, user, registered, mod=False):
         """Checks whether the user is allowed to zip in the current room"""
         if registered:
@@ -636,11 +650,8 @@ class VolaZipBot(object):
         if (name in self.cfg['rooms'][self.roomselect]['allowedzippers']) or ('all' in self.cfg['rooms'][self.roomselect]['allowedzippers']) or mod:
             return True
         else:
-            self.printl(user + " was denied!", "zipcheck")
-            try:
-                self.chatbot.post_chat("@{}: Who even are you? (use !zip help)".format(user))
-            except OSError:
-                self.printl("message could not be sent - OSError", "zipcheck")
+            self.printl(user + " was accepted!", "zipcheck")
+            self.post_chat("@{}: Who even are you? (use !zip help)".format(user))
             return False
 
     class MyOpenLoad(OpenLoad):
