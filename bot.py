@@ -97,6 +97,9 @@ class VolaZipBot(object):
             elif datetime.now() > self.refresh_time:
                 # if the refreshtime is now -> close the bot
                 self.close()
+            elif self.alive is False and m.nick == self.cfg['main']['zipbotuser'] and "i'm out!" in m.msg.lower():
+                # slight workaround was needed
+                self.listen.close()
 
         if self.alive:
             # add the listener on the volapi room
@@ -547,13 +550,14 @@ class VolaZipBot(object):
         self.printl(user + " -> killing bots in room: " + str(self), "kill")
         self.alive = False
         try:
-            self.post_chat("@{}: Thats it, i'm out!".format(user))
+            self.listen.post_chat("@{}: Thats it, i'm out!".format(user))
         except OSError:
             self.printl("message could not be sent - OSError", "kill")
         time.sleep(1)
-        self.listen.close()
-        del self.listen
-        del self.cfg
+        # Workaround after volapi 5.9.1 was needed
+        #self.listen.close()
+        #del self.listen
+        #del self.cfg
         global kill
         kill = True
         return ""

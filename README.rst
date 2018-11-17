@@ -14,7 +14,7 @@ Installation
   a) Python 3.7+?
   b) pip 
 1) How to install
-  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.1.0.zip
+  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.1.1.zip
   b) Unzip and enter the folder with you favourite shell, then type:
 ::
 
