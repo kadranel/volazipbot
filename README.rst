@@ -2,7 +2,7 @@
 Volazipbot
 =====================
 
-This is a pretty crappy volazipbot written for Python 3. If i were to do this again i'd use javascript, but wanted to share this nevertheless since it works.
+This is a pretty crappy volafile.net zipbot written for Python 3.7. It can zip files, mirror files files to openload and thats basically it for now. If i were to do this again i'd use javascript, but wanted to share this nevertheless since it works.
 The current version is highly dependant on changes to volafile.net and especially to adaptions of changes in volapi_.
 
 .. _volapi: https://github.com/Szero/volapi
