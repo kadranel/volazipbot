@@ -55,57 +55,56 @@ class VolaZipBot(object):
             self.roompw = '*'
 
         # Connecting to the room via volapi
-        self.listen = self.chatbot()
+        self.listen = self.listen_room()
+        self.interact = self.interact_room()
         self.printl("Session: {}".format(self.session), "__init__")
 
     def __repr__(self):
-        return "<VolaZipBot(alive={}, zipper={}, listen={})>".format(self.alive, self.zipper, str(self.listen))
+        return "<VolaZipBot(alive={}, zipper={}, listen={}, interact={})>".format(self.alive, self.zipper, str(self.listen), str(self.interact))
 
     def joinroom(self):
         """Adds the listener to the room."""
 
         def onmessage(m):
             """Print the new message and respond to user input"""
-            self.printl(m, "onmessage/main")
+            self.printl(f.msg_formatter(m), "onmessage/main")
 
             # Commands for the bot are evaluated here
-            if self.zipper is True and self.wake is True and (str(m.msg.lower()[0:9]) == '!zip help' or str(m.msg.lower()[0:5]) == '!help'):
+            if self.zipper is True and self.wake is True and (str(m.lower()[0:9]) == '!zip help' or str(m.lower()[0:5]) == '!help'):
                 self.zip_help(m.nick)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:4]) == '!zip') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
-                self.zip_handler(m.nick, m.msg, files=m.files)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!count') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
-                self.count_handler(m.nick, m.msg, files=m.files)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:7]) == '!mirror') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
-                self.mirror_handler(m.nick, m.msg, files=m.files)
-            elif self.zipper is True and (str(m.msg.lower()[0:6]) == '!alive'):
+            elif self.zipper is True and self.wake is True and (str(m.lower()[0:4]) == '!zip') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.zip_handler(m.nick, m, files=m.files)
+            elif self.zipper is True and self.wake is True and (str(m.lower()[0:6]) == '!count') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.count_handler(m.nick, m, files=m.files)
+            elif self.zipper is True and self.wake is True and (str(m.lower()[0:7]) == '!mirror') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
+                self.mirror_handler(m.nick, m, files=m.files)
+            elif self.zipper is True and (str(m.lower()[0:6]) == '!alive'):
                 self.printl("{} -> checking for bot: {}".format(m.nick, str(self)), "alive")
                 if self.wake is True:
                     self.post_chat("@{}: chinaman working!".format(m.nick))
                 else:
                     self.post_chat("@{}: chinaman is asleep.".format(m.nick))
-            elif self.zipper is True and (str(m.msg.lower()[0:5]) == '!kill') and self.admincheck(m.nick, m.green, m.purple):
+            elif self.zipper is True and (str(m.lower()[0:5]) == '!kill') and self.admincheck(m.nick, m.green, m.purple):
                 self.kill(m.nick)
-            elif self.zipper is True and self.wake is True and (str(m.msg.lower()[0:6]) == '!sleep') and self.admincheck(m.nick, m.green, m.purple):
+            elif self.zipper is True and self.wake is True and (str(m.lower()[0:6]) == '!sleep') and self.admincheck(m.nick, m.green, m.purple):
                 self.post_chat("@{}: chinaman going to sleep!".format(m.nick))
                 self.wake = False
-            elif self.zipper is True and self.wake is False and (str(m.msg.lower()[0:5]) == '!wake') and self.admincheck(m.nick, m.green, m.purple):
+            elif self.zipper is True and self.wake is False and (str(m.lower()[0:5]) == '!wake') and self.admincheck(m.nick, m.green, m.purple):
                 self.post_chat("@{}: chinaman woke up!".format(m.nick))
                 self.wake = True
-            elif self.zipper is False and (str(m.msg.lower()[0:7]) == '!zipbot') and self.admincheck(m.nick, m.green):
+            elif self.zipper is False and (str(m.lower()[0:7]) == '!zipbot') and self.admincheck(m.nick, m.green):
                 self.post_chat("@{}: Whuddup!".format(m.nick))
                 self.zipper = True
             elif datetime.now() > self.refresh_time:
                 # if the refreshtime is now -> close the bot
                 self.close()
-            elif self.alive is False and m.nick == self.cfg['main']['zipbotuser'] and "i'm out!" in m.msg.lower():
-                # slight workaround was needed
-                self.listen.close()
 
         if self.alive:
             # add the listener on the volapi room
             self.listen.add_listener("chat", onmessage)
             self.printl("Connecting to room: {}".format(str(self.listen)), "joinroom")
             self.listen.listen()
+
 
     def mirror_handler(self, name, message, files):
         """Grabs files from a room and uplpoads them to openload"""
@@ -170,6 +169,7 @@ class VolaZipBot(object):
                         for fi in os.listdir(self.zipfol(newfol)):
                             testmsg = retmsg
                             xpath = os.path.join(self.zipfol(newfol), fi)
+                            self.printl('Uploading to openload: ' + xpath, "mirrorhandler")
                             upinfos = self.upOpenload(xpath)
                             testmsg = testmsg + ' ' + upinfos['url']
                             # putting together the message with file links
@@ -182,7 +182,7 @@ class VolaZipBot(object):
 
                                 i = i + 1
 
-                        self.post_chat(retmsg)
+                        # self.post_chat(retmsg)
 
                         # creating the _mirror.txt here
                         uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror.txt'
@@ -407,13 +407,13 @@ class VolaZipBot(object):
 
     def volaupload(self, uppath):
         """Uploads a file to vola, currently user/passwd are not needed"""
-        return self.listen.upload_file(uppath)
+        return self.interact.upload_file(uppath)
 
     def post_chat(self, message):
         """Posts a chat message to the connected room"""
 
         try:
-            self.listen.post_chat(message)
+            self.interact.post_chat(message)
             self.printl("Sending message: {}".format(message), "post_chat")
         except OSError:
             self.printl("Message could not be sent - OSError", "post_chat")
@@ -550,14 +550,16 @@ class VolaZipBot(object):
         self.printl(user + " -> killing bots in room: " + str(self), "kill")
         self.alive = False
         try:
-            self.listen.post_chat("@{}: Thats it, i'm out!".format(user))
+            self.interact.post_chat("@{}: Thats it, i'm out!".format(user))
         except OSError:
             self.printl("message could not be sent - OSError", "kill")
         time.sleep(1)
         # Workaround after volapi 5.9.1 was needed
-        #self.listen.close()
-        #del self.listen
-        #del self.cfg
+        self.listen.close()
+        del self.listen
+        self.interact.close()
+        del self.interact
+        del self.cfg
         global kill
         kill = True
         return ""
@@ -568,6 +570,8 @@ class VolaZipBot(object):
         self.alive = False
         self.listen.close()
         del self.listen
+        self.interact.close()
+        del self.interact
         del self.cfg
         return ""
 
@@ -582,15 +586,28 @@ class VolaZipBot(object):
         fl.write(unidecode(msg))
         fl.close()
 
-    def chatbot(self):
+    def listen_room(self):
+        """Creates a Room instance that does only listens to chat."""
+        if self.roompw == '*':
+            r = Room(name=self.room, user=self.cfg['main']['zipbotuser'])
+        elif self.roompw[0:4] == '#key':
+            r = Room(name=self.room, user=self.cfg['main']['zipbotuser'], key=self.roompw[4:])
+        else:
+            r = Room(name=self.room, user=self.cfg['main']['zipbotuser'], password=self.roompw)
+        self.printl("Listening room created", "listen_room")
+
+        return r
+
+    def interact_room(self):
         """Creates a Room instance that does not listen to chat, but is used to operate with the room for uploads or messages."""
         if not(os.path.exists(self.safefol(self.room))):
             self.crfol(self.room)
         dpath = self.safefol(self.room) + '/' + self.session + '.txt'
 
-        fl = open(dpath, "w+")
-        fl.write('Logging for ' + self.session + ':\n')
-        fl.close()
+        if not os.path.isfile(dpath):
+            fl = open(dpath, "w+")
+            fl.write('Logging for ' + self.session + ':\n')
+            fl.close()
 
         if self.roompw == '*':
             r = Room(name=self.room, user=self.cfg['main']['dluser'])
@@ -601,9 +618,9 @@ class VolaZipBot(object):
 
         time.sleep(1)
         if r.user.login(self.cfg['main']['dlpass']):
-            self.printl("Logged in as: " + self.cfg['main']['dluser'], "chatbot")
+            self.printl("Logged in as: " + self.cfg['main']['dluser'], "interact_room")
         else:
-            self.printl("Login failed!", "chatbot")
+            self.printl("Login failed!", "interact_room")
 
         if not self.loggedin:
 
@@ -615,7 +632,7 @@ class VolaZipBot(object):
                     cookies_dict[cookie.name] = cookie.value
                     self.loggedin = True
             self.cookies = {**self.cookies, **cookies_dict}
-            self.printl("Download session cookie: " + str(self.cookies), "chatbot")
+            self.printl("Download session cookie: " + str(self.cookies), "interact_room")
 
         if not(self.cfg['main']['dluser'] == self.cfg['main']['zipbotuser']):
 
@@ -625,11 +642,12 @@ class VolaZipBot(object):
             time.sleep(1)
 
             if r.user.login(self.cfg['main']['zipbotpass']):
-                self.printl("Logged in as: " + self.cfg['main']['zipbotuser'], "chatbot")
+                self.printl("Logged in as: " + self.cfg['main']['zipbotuser'], "interact_room")
             else:
-                self.printl("Login failed!", "chatbot")
+                self.printl("Login failed!", "interact_room")
 
         return r
+
 
     def admincheck(self, user, registered, mod=False):
         """Checks whether the user is a botadmin in the current room"""

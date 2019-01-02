@@ -8,6 +8,20 @@ def id_generator(size=7, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
+def msg_formatter(msg):
+    prefix = ''
+    if msg.purple:
+        prefix += "@"
+    if msg.janitor:
+        prefix += "~"
+    if msg.green:
+        prefix += "+"
+    if msg.system:
+        prefix += "%"
+
+    return "<{}{} | {}>".format(prefix, msg.nick, msg)
+
+
 def namereplace(name):
     return name.replace('*', '').replace(':', '')
 
