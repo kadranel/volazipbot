@@ -60,7 +60,8 @@ class VolaZipBot(object):
         # Connecting to the room via volapi
         try:
             self.interact = self.interact_room()
-            self.listen = self.listen_room()
+            # self.listen = self.listen_room()
+            self.listen = self.interact
             self.printl("Session: {}".format(self.session), "__init__")
         except OSError:
             self.printl("Failed to connect - trying to reconnect in 60 seconds", "__init__")
@@ -85,7 +86,7 @@ class VolaZipBot(object):
             elif self.zipper and self.wake and (str(m.lower()[0:6]) == '!count') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
                 self.count_handler(m.nick, m, files=m.files)
             elif self.zipper and self.wake and (str(m.lower()[0:7]) == '!mirror') and self.zipcheck(m.nick, m.green, m.purple or m.janitor):
-                self.mirror_handler(m.nick, m, files=m.files)
+                self.mirror_handler(m.nick, m)
             elif self.zipper and (str(m.lower()[0:6]) == '!alive'):
                 self.printl("{} -> checking for bot: {}".format(m.nick, str(self)), "alive")
                 if self.wake:
@@ -103,6 +104,8 @@ class VolaZipBot(object):
             elif not self.zipper and (str(m.lower()[0:7]) == '!zipbot') and self.admincheck(m.nick, m.green):
                 self.post_chat("@{}: Whuddup!".format(m.nick))
                 self.zipper = True
+            elif str(m.lower()[0:8]) == '!restart' and self.admincheck(m.nick, m.green):
+                self.close()
             elif datetime.now() > self.refresh_time:
                 # if the refreshtime is now -> close the bot
                 self.close()
@@ -118,114 +121,105 @@ class VolaZipBot(object):
                 self.close()
             return False
 
-    def mirror_handler(self, name, message, files):
+    def mirror_handler(self, name, message):
         """Grabs files from a room and uplpoads them to openload"""
         self.printl("{} -> requested mirror".format(name), "mirror_handler")
 
         # generate a folder name
         newfol = f.id_generator()
+        mspl = str(message).split('@')
+        mirr_message = ""
 
-        if not(files is None) and len(files) == 1:
-            mspl = str(message).split('@')
-            # look if the file is in the room
-            if self.file_in_room(str(mspl[1]).replace(" ", "")):
-                # create the message, that gets put at the end of the _mirror.txt
-                filechecked = self.filecheck(name, files[0])
-                mirr_message = ""
-                memadd = files[0].size
+        # look if the file is in the room
+        file_info, url, memadd, filechecked = self.filecheck(name, str(mspl[1]).replace(" ", ""))
+        if not file_info:
+            self.post_chat('@{}: Your Message could not be interpreted correctly. (use !zip help)'.format(name))
+            return False
 
-                # this checks whether the file is lower than the maximum mirror file size allowed in cfg
-                if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
+        # this checks whether the file is lower than the maximum mirror file size allowed in cfg
+        if memadd / self.cfg['main']['multiplier'] <= self.cfg['rooms'][self.roomselect]['mirrormaxmem']:
 
-                    self.post_chat('@{}: Starting to mirror.'.format(name))
-                    time.sleep(1)
-                    # Downloading the file here while getting the filepath back
-                    zippath = self.singleFileDownload(files[0].url, newfol, True)
-                    # Checking if file is bigger then 995 mb since openload does not allow files > 1gb
-                    if memadd / self.cfg['main']['multiplier'] <= self.cfg['main']['mirrorziptest']:
-                        self.printl('Uploading to Openload: {}'.format(zippath), "mirrorhandler")
-                        # Uploading the file to openload
-                        upinfos = self.upOpenload(zippath)
-                        self.printl(str(upinfos), "mirrorhandler")
-                        mirr_message = upinfos['url'] + "\n"
-                        uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror.txt'
-                        # return message to chat
-                        self.post_chat('@{}: {} is uploaded to -> {}'.format(name, upinfos['name'], upinfos['url']))
-                        if os.path.isfile(uppath):
-                            uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror_' + str(f.id_generator()) + '.txt'
-                        fl = open(uppath, "w+")
-                        fl.write(mirr_message + ' \n' + filechecked)
-                        fl.close()
-                        self.volaupload(uppath)
-                    else:
-                        # file is > 1gb -> needs to be converted to zip and split before uploading
-                        self.printl('Checking if zip: {}'.format(zippath), "mirrorhandler")
-                        pathsplit = zippath.split('/')
-                        filesplit = str(pathsplit[-1])
-                        endsplit = filesplit.split('.')
-                        ending = str(endsplit[-1])
-                        if ending != 'zip':
-                            # making a zip
-                            zipname = filesplit
-                            shutil.make_archive(zipname, 'zip', self.zipfol(newfol))
-                            os.remove(self.zipfol(newfol) + '/' + zipname)
-                            shutil.move(zipname + '.zip', self.zipfol(newfol) + '/' + zipname + '.zip')
-                            zippath = self.zipfol(newfol) + '/' + zipname + '.zip'
-
-                        # splitting the zip with file_split
-                        self.printl('Splitting zip: ' + zippath, "mirrorhandler")
-                        self.file_split(zippath, self.cfg['main']['mirrorzipmax'] * self.cfg['main']['multiplier'])
-                        shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
-                        retmsg = '@{}: {} is uploaded to ->'.format(name, filesplit)
-                        i = 1
-                        for fi in os.listdir(self.zipfol(newfol)):
-                            testmsg = retmsg
-                            xpath = os.path.join(self.zipfol(newfol), fi)
-                            self.printl('Uploading to openload: ' + xpath, "mirrorhandler")
-                            upinfos = self.upOpenload(xpath)
-                            testmsg = testmsg + ' ' + upinfos['url']
-                            # putting together the message with file links
-                            mirr_message = mirr_message + upinfos['url'] + " \n"
-                            if len(testmsg) < (295 * i):
-                                # max of 300 characters for one vola chat message
-                                retmsg = testmsg
-                            else:
-                                retmsg = retmsg + '\n' + ' ' + upinfos['url']
-
-                                i = i + 1
-
-                        # self.post_chat(retmsg)
-
-                        # creating the _mirror.txt here
-                        uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror.txt'
-                        if os.path.isfile(uppath):
-                            uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror_' + str(f.id_generator()) + '.txt'
-                        fl = open(uppath, "w+")
-                        fl.write(mirr_message + ' \n' + filechecked)
-                        fl.close()
-                        self.volaupload(uppath)
-                    # cleanup
-                    pathsplit = zippath.split('/')
-                    filesplit = str(pathsplit[-1])
-                    if os.path.isfile(zippath):
-                        shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
-                    shutil.rmtree(self.zipfol(newfol))
-                else:
-                    self.post_chat('@{}: The file @{} is too big to mirror. -> > {} MB'.format(name, str(mspl[1].replace(" ", "")), str(self.cfg['rooms'][self.roomselect]['mirrormaxmem'])))
-
+            self.post_chat('@{}: Starting to mirror.'.format(name))
+            time.sleep(1)
+            # Downloading the file here while getting the filepath back
+            zippath = self.singleFileDownload(url, newfol, True)
+            # Checking if file is bigger then 995 mb since openload does not allow files > 1gb
+            if memadd / self.cfg['main']['multiplier'] <= self.cfg['main']['mirrorziptest']:
+                self.printl('Uploading to Openload: {}'.format(zippath), "mirrorhandler")
+                # Uploading the file to openload
+                upinfos = self.upOpenload(zippath)
+                self.printl(str(upinfos), "mirrorhandler")
+                mirr_message = upinfos['url'] + "\n"
+                uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror.txt'
+                # return message to chat
+                self.post_chat('@{}: {} is uploaded to -> {}'.format(name, upinfos['name'], upinfos['url']))
+                if os.path.isfile(uppath):
+                    uppath = self.cfg['os'][self.platform]['mirrorlogs'] + upinfos['name'] + '_mirror_' + str(f.id_generator()) + '.txt'
+                fl = open(uppath, "w+")
+                fl.write(mirr_message + ' \n' + filechecked)
+                fl.close()
+                self.volaupload(uppath)
             else:
-                self.post_chat('@{}: The file @{} was not found in the room and can not be mirrored in here.'.format(name, str(mspl[1].replace(" ", ""))))
+                # file is > 1gb -> needs to be converted to zip and split before uploading
+                self.printl('Checking if zip: {}'.format(zippath), "mirrorhandler")
+                pathsplit = zippath.split('/')
+                filesplit = str(pathsplit[-1])
+                endsplit = filesplit.split('.')
+                ending = str(endsplit[-1])
+                if ending != 'zip':
+                    # making a zip
+                    zipname = filesplit
+                    shutil.make_archive(zipname, 'zip', self.zipfol(newfol))
+                    os.remove(self.zipfol(newfol) + '/' + zipname)
+                    shutil.move(zipname + '.zip', self.zipfol(newfol) + '/' + zipname + '.zip')
+                    zippath = self.zipfol(newfol) + '/' + zipname + '.zip'
 
+                # splitting the zip with file_split
+                self.printl('Splitting zip: ' + zippath, "mirrorhandler")
+                self.file_split(zippath, self.cfg['main']['mirrorzipmax'] * self.cfg['main']['multiplier'])
+                shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
+                i = 1
+                for fi in os.listdir(self.zipfol(newfol)):
+                    xpath = os.path.join(self.zipfol(newfol), fi)
+                    self.printl('Uploading to openload: ' + xpath, "mirrorhandler")
+                    upinfos = self.upOpenload(xpath)
+                    # putting together the message with file links
+                    mirr_message = mirr_message + upinfos['url'] + " \n"
+
+                # creating the _mirror.txt here
+                uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror.txt'
+                if os.path.isfile(uppath):
+                    uppath = self.cfg['os'][self.platform]['mirrorlogs'] + filesplit + '_mirror_' + str(f.id_generator()) + '.txt'
+                fl = open(uppath, "w+")
+                fl.write(mirr_message + ' \n' + filechecked)
+                fl.close()
+                file_id = self.volaupload(uppath)
+                retmsg = '@{}: {} is uploaded to -> @{}'.format(name, filesplit, file_id)
+                time.sleep(2)
+                self.post_chat(retmsg)
+
+            # cleanup
+            pathsplit = zippath.split('/')
+            filesplit = str(pathsplit[-1])
+            if os.path.isfile(zippath):
+                shutil.move(zippath, self.cfg['os'][self.platform]['mirrorfolder'] + filesplit)
+            shutil.rmtree(self.zipfol(newfol))
         else:
-            self.post_chat('@{}: Your message could not be interpreted correctly. (use !zip help)'.format(name))
+            self.post_chat('@{}: The file @{} is too big to mirror. -> > {} MB'.format(name, str(mspl[1].replace(" ", "")), str(self.cfg['rooms'][self.roomselect]['mirrormaxmem'])))
 
-    def filecheck(self, name, file):
+    def filecheck(self, name, id):
         """Returns fileinfo for the _mirror.txt"""
-        fileupl = str(file.uploader)
-        filesize = file.size/self.cfg['main']['multiplier']
-        requester = str(name)
-        filesizestring = "{0:.2f}".format(filesize) + " MB"
-        return "You need to download all of the links to have a complete file # Size: {} # Uploader: {} # Requested by: {} # ".format(filesizestring, fileupl, requester)
+        file_info = self.interact.fileinfo(id)
+        if file_info:
+            fileupl = str(file_info['user'])
+            filesize = file_info['size']
+            requester = str(name)
+            filesizestring = "{0:.2f}".format(filesize/self.cfg['main']['multiplier']) + " MB"
+            url = 'https://volafile.org/get/{}/{}'.format(file_info['id'], file_info['name'])
+            filechecked =  "You need to download all of the links to have a complete file # Size: {} # Uploader: {} # Requested by: {} # ".format(filesizestring, fileupl, requester)
+            return file_info, url, filesize, filechecked
+        else:
+            return False, "", 0, ""
 
     def count_handler(self, name, message, files):
         """Counts file positions in the current room"""
@@ -545,6 +539,7 @@ class VolaZipBot(object):
             fl.close()
             fileid = self.volaupload(tpath)
             help_file = fileid
+            os.remove(tpath)
             time.sleep(2)
         self.post_chat("@{}: -> @{}".format(user, str(help_file)))
 
@@ -577,7 +572,7 @@ class VolaZipBot(object):
 
     def close(self):
         """only closes the current session, afterwards the bot reconnects"""
-        self.printl("Closing current instance due to runtime: " + str(self), "close")
+        self.printl("Closing current instance: " + str(self), "close")
         self.alive = False
         self.listen.close()
         del self.listen
@@ -665,7 +660,6 @@ class VolaZipBot(object):
                 self.printl("Login failed!", "interact_room")
 
         return r
-
 
     def admincheck(self, user, registered, mod=False):
         """Checks whether the user is a botadmin in the current room"""
