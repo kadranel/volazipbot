@@ -19,7 +19,7 @@ kill = False
 class VolaZipBot(object):
     def __init__(self, args):
         # Creating a session and a refresh_time. The bot starts a new session once the refresh_time is reached
-        self.session = datetime.now().strftime("%Y-%m-%d") + "-" + f.id_generator()
+        self.session = datetime.now().strftime("[%Y-%m-%d][%H-%M-%S]") + '[' + args[0] + ']' + "[" + f.id_generator() + "]"
         self.refresh_time = datetime.now() + timedelta(days=1)
 
         # Setting status booleans
@@ -63,11 +63,9 @@ class VolaZipBot(object):
             self.listen = self.listen_room()
             self.printl("Session: {}".format(self.session), "__init__")
         except OSError:
-            self.printl("Failed to connect - trying to reconnect in 30 seconds", "__init__")
-            time.sleep(30)
+            self.printl("Failed to connect - trying to reconnect in 60 seconds", "__init__")
+            time.sleep(60)
             self.alive = False
-            self.close()
-
 
     def __repr__(self):
         return "<VolaZipBot(alive={}, zipper={}, listen={}, interact={})>".format(self.alive, self.zipper, str(self.listen), str(self.interact))
@@ -119,8 +117,6 @@ class VolaZipBot(object):
                 self.printl("Socket disconnected, trying to reconnect... - OSError", "onmessage")
                 self.close()
             return False
-
-
 
     def mirror_handler(self, name, message, files):
         """Grabs files from a room and uplpoads them to openload"""
@@ -764,7 +760,7 @@ def parse_args():
     """Parses user arguments"""
     parser = argparse.ArgumentParser(
         description="Crappy VolaZipBot",
-        epilog=("Pretty meh")
+        epilog="Pretty meh"
         )
     parser.add_argument('--room', '-r', dest='room', type=str, required=True,
                         help='Room name, as in https://volafile.org/r/ROOMNAME -> [ROOMNAME]')
@@ -787,7 +783,7 @@ def main():
     else:
         zipper = False
     lister = [args.room, zipper, args.passwd]
-    while not(kill):
+    while not kill:
         v = VolaZipBot(lister)
         v.joinroom()
 
@@ -796,7 +792,7 @@ def main_callable(room, zipper=False, passwd='*'):
     """Callable main method with arguments"""
     global kill
     lister = [room, zipper, passwd]
-    while not(kill):
+    while not kill:
         v = VolaZipBot(lister)
         v.joinroom()
 

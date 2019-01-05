@@ -12,9 +12,9 @@ Installation
 
 0) What do you need?
   a) Python 3.7+?
-  b) pip 
+  b) pip
 1) How to install
-  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.2.1.zip
+  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.2.2.zip
   b) Unzip and enter the folder with you favourite shell, then type:
 ::
 
@@ -41,15 +41,15 @@ Installation
                                                        uploading to openload (Max. filesize of 1 GB)
         "zipbotuser": "zipbotuser",                <- CHANGE NEEDED HERE: user details for your chat/upload volafile
         "zipbotpass": "zipbotpassword",               user
-        "dluser": "downloaduser",                  <- CHANGE NEEDED HERE: user details for your download volafile 
+        "dluser": "downloaduser",                  <- CHANGE NEEDED HERE: user details for your download volafile
         "dlpass": "downloadpassword",                 user. It can be the same as zipbot
-        "opus": "openload-apiuser",                <- CHANGE NEEDED HERE: Your openload api user and key    
+        "opus": "openload-apiuser",                <- CHANGE NEEDED HERE: Your openload api user and key
         "oppw": "openload-apikey"
       },
       "rooms": {                                   ROOM CONFIGURATION
-        "genericroom": {                           <- DO NOT RENAME "genericroom", it is used as a fallback 
+        "genericroom": {                           <- DO NOT RENAME "genericroom", it is used as a fallback
           "allowedzippers": [                         room, if you send your bot to new rooms.
-            "*kad",                                <- Add and/or delete users here to give them permission to 
+            "*kad",                                <- Add and/or delete users here to give them permission to
             "*zipbot",                                use !zip, !mirror and !count in unknown rooms.
             "*RealDolos"                              The "*" infront of the names refers to registered users
           ],                                          on volafile
@@ -60,13 +60,13 @@ Installation
           "maxmem": 5000.0,                        <- 5000 Mb is the max filesize for zipping, changeable
           "anonfile": 0                            <- Switch to -1 if you want to use anonfile instead of openload
         },                                            for files >1gb - instable feature though
-        
-        "YOURROOM": {                              <- CHANGE NEEDED HERE. Rename this with the room-id of a room 
+
+        "YOURROOM": {                              <- CHANGE NEEDED HERE. Rename this with the room-id of a room
           "allowedzippers": [                         you want to zip in:
             "all"                                     https://volafile.org/r/[room-id]
           ],                                          Apart from that, the same changes as in "genericroom" can
           "botadmins": [                              be made here. Also you can set different configurations
-            "*admiin",                                for multiple rooms by adding multiple of these sections with 
+            "*admiin",                                for multiple rooms by adding multiple of these sections with
             "*kad"                                    different room-ids as names.
           ],
           "mirrormaxmem": 7500.0,
@@ -74,10 +74,10 @@ Installation
           "anonfile": 0
         }
       },
-      "os": {                                     <- Two sections here, because i used the same config on a windows   
+      "os": {                                     <- Two sections here, because i used the same config on a windows
         "nt": {  <- change here for windows          and a linux pc. I did not try it on mac, but it should work.
           "logfolder": "./volalog/log/",             You can change these folder locations, just make sure the folder
-          "zipfolder": "./volalog/zip/",             exists before starting the bot. 
+          "zipfolder": "./volalog/zip/",             exists before starting the bot.
           "archfolder": "./volalog/archive/",
           "mirrorfolder": "./volalog/mirror/",
           "mirrorlogs": "./volalog/mirrorlogs/",
@@ -116,4 +116,3 @@ See https://github.com/kadranel/volazipbot/blob/master/ziphelp.txt
 Other
 ------------
 This code was not really prepared to be shared, so if you have any questions/improvements feel free to message me or straight up change code and post a pull request. I'll try to clean up and comment more of the code at a later stage.
-
