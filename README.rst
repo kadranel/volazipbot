@@ -2,8 +2,8 @@
 Volazipbot
 =====================
 
-This is a pretty crappy volafile.net zipbot written for Python 3.7. It can zip files, mirror files files to openload and thats basically it for now. If i were to do this again i'd use javascript, but wanted to share this nevertheless since it works.
-The current version is highly dependant on changes to volafile.net and especially to adaptions of changes in volapi_. (Currently the bot is working on volapi 5.13.0)
+This is a pretty crappy volafile.org zipbot written for Python 3.7. It can zip files, mirror files files to openload and thats basically it for now. If i were to do this again i'd use javascript, but wanted to share this nevertheless since it works.
+The current version is highly dependant on changes to volafile.org and especially to adaptions of changes in volapi_. (Currently the bot is working on volapi 5.13.0)
 
 .. _volapi: https://github.com/volafiled/python-volapi
 
@@ -14,7 +14,7 @@ Installation
   a) Python 3.7+?
   b) pip
 1) How to install
-  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.2.2.zip
+  a) Download the newest release of the bot at https://github.com/kadranel/volazipbot/archive/1.2.3.zip
   b) Unzip and enter the folder with you favourite shell, then type:
 ::
 

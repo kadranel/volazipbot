@@ -455,9 +455,9 @@ class VolaZipBot(object):
             path = self.crzipfol(newfol)
         urlsplit = URL.split('/')
         filesplit = str(urlsplit[-1]).split('.')
-        dpath = path + str(filesplit[0]) + '.' + str(filesplit[1])
+        dpath = path + str(filesplit[0]) + '.' + str(filesplit[-1])
         if os.path.isfile(dpath):
-            dpath = path + str(filesplit[0]) + "-" + f.id_generator() + '.' + str(filesplit[1])
+            dpath = path + str(filesplit[0]) + "-" + f.id_generator() + '.' + str(filesplit[-1])
         self.printl('[] Downloading: ' + dpath + ' - ' + URL, "singleFileDownload")
         self.download_file(URL, dpath)
         if mirror:
@@ -667,7 +667,7 @@ class VolaZipBot(object):
             name = "*" + user
         else:
             name = user
-        if (name in self.cfg['rooms'][self.roomselect]['botadmins']) or ('all' in self.cfg['rooms'][self.roomselect]['botadmins']) or mod:
+        if (name in self.cfg['rooms'][self.roomselect]['botadmins']) or ('+all' in self.cfg['rooms'][self.roomselect]['botadmins']) or mod or ('+registered' in self.cfg['rooms'][self.roomselect]['allowedzippers'] and registered):
             self.printl(user + " was accepted!", "admincheck")
             return True
         else:
@@ -681,10 +681,11 @@ class VolaZipBot(object):
             name = "*" + user
         else:
             name = user
-        if (name in self.cfg['rooms'][self.roomselect]['allowedzippers']) or ('all' in self.cfg['rooms'][self.roomselect]['allowedzippers']) or mod:
+        if (name in self.cfg['rooms'][self.roomselect]['allowedzippers']) or ('+all' in self.cfg['rooms'][self.roomselect]['allowedzippers']) or mod or ('+registered' in self.cfg['rooms'][self.roomselect]['allowedzippers'] and registered):
+            self.printl(user + " was accepted!", "zipcheck")
             return True
         else:
-            self.printl(user + " was accepted!", "zipcheck")
+            self.printl(user + " was denied!", "zipcheck")
             self.post_chat("@{}: Who even are you? (user denied - use !zip help)".format(user))
             return False
 
