@@ -119,6 +119,7 @@ See https://github.com/kadranel/volazipbot/blob/master/ziphelp.txt
 User administration
 ------------
 Possible user groups in the config file include:
+
 a) +all to let all users (whites/greens/etc) use the selected functions. -> not advisable
 b) +registered to let all logged in users (greens) use the selected functions
 c) +janitor to let all room janitors use the selected functions
