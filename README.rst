@@ -130,25 +130,25 @@ No Problem! The following commands can be used in the current volafile room to d
     !zip user add USERNAME
 
 Adds the user USERNAME to the allowed zippers in the room -> you can use +USERGROUP_NAME here as well.
-Usable by "botadmins" defined in the config.json, the "admin" defined in the config.json and the room owner
+Usable by "botadmins" defined in the config.json, the "admin" defined in the config.json and the room owner.
 ::
 
     !zip user remove USERNAME
 
 Removes the user USERNAME from the allowed zippers in the room -> you can use +USERGROUP_NAME here as well.
-Usable by "botadmins" defined in the config.json, the "admin" defined in the config.json and the room owner
+Usable by "botadmins" defined in the config.json, the "admin" defined in the config.json and the room owner.
 ::
 
     !zip admin add USERNAME
 
 Adds the user USERNAME to the "botadmins" in the room -> you can use +USERGROUP_NAME here as well.
-Usable by the "admin" defined in the config.json and the room owner
+Usable by the "admin" defined in the config.json and the room owner.
 ::
 
-    !zip user remove USERNAME
+    !zip admin remove USERNAME
 
 Removes the user USERNAME from the "botadmins" in the room -> you can use +USERGROUP_NAME here as well.
-Usable by the "admin" defined in the config.json and the room owner
+Usable by the "admin" defined in the config.json and the room owner.
 
 Other
 ------------
