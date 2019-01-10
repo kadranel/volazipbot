@@ -9,6 +9,7 @@
 ----- #offset=NUMBEROFFILESSKIPPED -> Specifies how many files will be skipped all other modifiers considered -> example #offset=69
 ----- #zipname=NAMEOFZIP -> Name of output zip, no .zip needed. If not set it will be randomly generated -> example #zipname=blondegirl_123
 ----- #mirror -> an additional mirror will be uploaded to openload -> example #mirror
+----- #rename -> all downloaded files will be renamed to zipname-number before zipping. -> example #rename
 
 --- Examples:
 ----- !zip #upl=abcd#search=blonde#zipname=blondegirl_123#mirror
@@ -34,6 +35,11 @@
 
 - !zip help
 --- Uploads or references this textfile
+--- More about this bot: https://github.com/kadranel/volazipbot
 
 - !kill (Only usable by botadmins)
 --- Kills the bot in the room completely
+
+- !zip user add/remove username (Only usable by botadmins)
+--- Adds the specified user to the config.json and allows him to zip/mirror in the rooms.
+--- Can add "+all" for all users, "+registered" for all greens and "+janitor" for all janitors in the room

@@ -1,6 +1,7 @@
 {
   "main": {
-    "multiplier": 1048576,
+    "admin": "YOURUSERNAME",
+    "keepfiles": 0,
     "headers": {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:55.0) Gecko/20100101 Firefox/55.0",
       "DNT": "1",
@@ -22,11 +23,12 @@
     "genericroom": {
       "allowedzippers": [
         "*kad",
-        "*zipbot",
-        "*RealDolos"
+        "+janitor"
+        "+registered"
       ],
       "botadmins": [
-        "*kad"
+        "*kad",
+        "+janitor"
       ],
       "mirrormaxmem": 7500.0,
       "maxmem": 5000.0,
@@ -34,7 +36,7 @@
     },
     "YOURROOM": {
       "allowedzippers": [
-        "all"
+        "+registered"
       ],
       "botadmins": [
         "*admiin",
@@ -47,11 +49,11 @@
   },
   "os": {
     "nt": {
-      "logfolder": "./volalog/log/",
-      "zipfolder": "./volalog/zip/",
-      "archfolder": "./volalog/archive/",
-      "mirrorfolder": "./volalog/mirror/",
-      "mirrorlogs": "./volalog/mirrorlogs/",
+      "logfolder": "./voladl/log/",
+      "zipfolder": "./voladl/zip/",
+      "archfolder": "./voladl/archive/",
+      "mirrorfolder": "./voladl/mirror/",
+      "mirrorlogs": "./voladl/mirrorlogs/",
       "membuff": 1000
     },
     "posix": {

@@ -12,31 +12,19 @@ def msg_formatter(msg):
     prefix = ''
     if msg.purple:
         prefix += "@"
+    if msg.owner:
+        prefix += "$"
     if msg.janitor:
         prefix += "~"
     if msg.green:
         prefix += "+"
     if msg.system:
         prefix += "%"
-
     return "<{}{} | {}>".format(prefix, msg.nick, msg)
 
 
-def namereplace(name):
-    return name.replace('*', '').replace(':', '')
-
-
-def replaceFName(name):
-    return name.replace('#', '').replace('<', '').replace('>', '').replace('$', '').replace('%', '').replace('!', '').replace('&', '').replace('*', '').replace('', '').replace('{', '').replace('}', '').replace('?', '').replace('"', '').replace('/', '').replace(':', '').replace('/', '').replace('@', '').replace(' ', '_')
-
-
-def zipNameReplace(name):
-    return name.replace(' ', '#').replace('<', '#').replace('>', '#').replace('$', '#').replace('%', '#').replace('!', '#').replace('&', '#').replace('*', '#').replace('_', '#').replace('{', '#').replace('}', '#').replace('?', '#').replace('"', '#').replace('/', '#').replace(':', '#').replace('/', '#').replace('@', '#').replace(' ', '#')
-
-
-def anonfileupload(filepath):
-    URL = 'https://anonfile.com/api/upload'
-    # files = {'file': open(filepath, 'rb')}
+def anonfile_upload(filepath):
+    url = 'https://anonfile.com/api/upload'
     spl = filepath.split("/")
     filename = spl[-1]
     with open(filepath, 'rb') as upload_file:
@@ -44,9 +32,30 @@ def anonfileupload(filepath):
             "file": (filename, upload_file, "application/octet-stream"),
         })
         headers = {"Content-Type": data.content_type}
-        r = requests.post(URL, data=data, headers=headers)
+        r = requests.post(url, data=data, headers=headers)
     dat = r.json()
     return dat
 
 
-
+def input_replace(text):
+    text = str(text).replace(" ", "")
+    text = text.replace("#", "")
+    text = text.replace("%", "")
+    text = text.replace("§", "")
+    text = text.replace("&", "")
+    text = text.replace("/", "")
+    text = text.replace("(", "")
+    text = text.replace(")", "")
+    text = text.replace("{", "")
+    text = text.replace("}", "")
+    text = text.replace("[", "")
+    text = text.replace("]", "")
+    text = text.replace("!", "")
+    text = text.replace(".", "")
+    text = text.replace("-", "")
+    text = text.replace("=", "")
+    text = text.replace("´", "")
+    text = text.replace("`", "")
+    text = text.replace("~", "")
+    text = text.replace("*", "")
+    return text
