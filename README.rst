@@ -191,6 +191,62 @@ b) Configure the rooms you want to send the bot to in starter_config.json (more 
     }
 
 Commands to be used in the admin_room:
+You can either call all rooms by using #all or call a specific room with #roomname. 
+::
+    #all restart
+    
+Restarts the bot in all rooms. 
+::
+    #all kill
+    
+Stops the bot in all rooms.
+::
+    #all full restart
+    
+Restarts to the bot in all rooms, but closes all currently running screen-instances instead of restarting in the current running instance
+::
+    #all full kill
+    
+Stops the bot in all rooms, but also stops new screen-instances to be started by setting kill to 1 in starter_config.json
+::
+    #all revive
+    
+Reverts the full kill command
+::
+    #all mute
+    
+Stops all bots from sending chat messages
+::
+    #all unmute
+    
+Revert #all mute
+::
+    #all session
+
+Creates a file of the current log in every bot instance and uploads it to the admin_room
+::
+    #roomname restart
+    #roomname kill
+    #roomname mute
+    #roomname unmute
+    #roomname session
+
+Mirrors the functions from above for a single room
+::
+    #roomname zipper
+    
+Switches the bot from listening to zipping and vice-versa
+::
+    #roomname ping
+    
+Pings a bot and recieves a message in chat. 
+This also allows #roomname user and #roomname admin with the messages defined in User administration.
+::
+    #adminroom join #newroom#pw
+    
+Joins a new room and adds it to the starter_config.json
+
+This also enables new ways to start the bot e.g. in a crontab by starting the starter.py all 10 minutes. That will check for bot instances that are stuck or that crashed in the last 10 minutes.
 
 Other
 ------------
