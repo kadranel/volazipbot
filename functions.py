@@ -20,7 +20,7 @@ def msg_formatter(msg):
         prefix += "+"
     if msg.system:
         prefix += "%"
-    return "<{}{} | {}>".format(prefix, msg.nick, msg)
+    return f"<{prefix}{msg.nick} | {msg}>"
 
 
 def anonfile_upload(filepath):

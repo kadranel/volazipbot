@@ -1,9 +1,11 @@
 {
   "main": {
     "admin": "YOURUSERNAME",
+    "adminroom": "ROOMNAME",
+    "adminroom_pass": "",
     "keepfiles": 0,
     "headers": {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:55.0) Gecko/20100101 Firefox/55.0",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0",
       "DNT": "1",
       "Upgrade-Insecure-Requests": "1"
     },
@@ -32,7 +34,9 @@
       ],
       "mirrormaxmem": 7500.0,
       "maxmem": 5000.0,
-      "anonfile": 0
+      "anonfile": 0,
+      "muted": 0,
+      "msg_redirect": 0
     },
     "YOURROOM": {
       "allowedzippers": [
@@ -44,7 +48,9 @@
       ],
       "mirrormaxmem": 7500.0,
       "maxmem": 5000.0,
-      "anonfile": 0
+      "anonfile": 0,
+      "muted": 0,
+      "msg_redirect": 0
     }
   },
   "os": {

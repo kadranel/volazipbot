@@ -1,0 +1,25 @@
+{
+  "python": "python3",
+  "kill": 0,
+  "folderpath": "/full/path/to/volazipbot/",
+  "rooms": {
+    "n7yc3pgw": {
+      "password": "",
+      "restart": 0,
+      "join": 1,
+      "zipper": 1
+    },
+    "ADMINROOM": {
+      "password": "",
+      "restart": 0,
+      "join": 1,
+      "zipper": 1
+    },
+    "whatever": {
+      "password": "whatever",
+      "restart": 0,
+      "join": 1,
+      "zipper": 1
+    }
+  }
+}
