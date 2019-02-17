@@ -27,6 +27,8 @@ Installation
     {
       "main": {                                    MAIN CONFIGURATION
         "admin": "YOURNAMEHERE",                   <- You should change "admin" to your main user account.
+        "adminroom": "ROOMNAME",                   <- If you want to use an admin_room for administration
+        "adminroom_pass": "",                         specify it here with a password, else set "adminroom": ""
         "keepfiles": 0,                            <- If 0 -> all files will be deleted, If 1 -> zipped
                                                       files will be kept in "archfolder" and "mirrorfolder"
         "headers": {                               <- You should not change "headers", but you can.
@@ -150,6 +152,45 @@ Usable by the "admin" defined in the config.json and the room owner.
 
 Removes the user USERNAME from the "botadmins" in the room -> you can use +USERGROUP_NAME here as well.
 Usable by the "admin" defined in the config.json and the room owner.
+
+Usage of an admin room
+------------
+This feature allows you to more easily administrate multiple bot instances at the same time. 90% of the provided features only work on Linux/Mac with the "screen"-tool installed, Therefore it is not advisable to configure this if you want to use the bot on windows.
+If you want to use a central admin room for all your room configuration the following things have to be setup and configured:
+
+a) You need to create a volafile room with your admin_user and specify it in config.json (better with a roompassword)
+b) Configure the rooms you want to send the bot to in starter_config.json (more explanation below):
+
+::
+
+    {
+    "os": {                                     <- Two sections here, because i used the same config on a windows
+      "python": "python3",                      <- Specify your python-version here or even better your full path
+      "kill": 0,                                <- Used internally
+      "folderpath": "/full/path/volazipbot/",   <- Specify the path your application is in
+      "rooms": {
+        "n7yc3pgw": {                           <- Specify rooms your bot is going to be sent to.
+          "password": "",
+          "restart": 0,                         <- Used internally
+          "join": 1,                            <- Used internally
+          "zipper": 1                           <- Do you want to activate functions or only listen.
+        },                                         1 = activated, 0 = only listen
+        "ADMINROOM": {                          <- You should also send your bot to your specified admin_room
+          "password": "",                          if you want to use all features the admin_room provides.
+          "restart": 0,                            Therefore change ADMINROOM to the room name of your admin
+          "join": 1,                               room.
+          "zipper": 1
+        },
+        "whatever": {
+          "password": "whatever",
+          "restart": 0,
+          "join": 1,
+          "zipper": 1
+        }
+      }
+    }
+
+Commands to be used in the admin_room:
 
 Other
 ------------
