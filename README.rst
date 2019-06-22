@@ -1,3 +1,5 @@
+Attention, this will no longer be updated to newer versions of volapi due to time constraints! (Date: 22 June 2019)
+
 =====================
 Volazipbot
 =====================
